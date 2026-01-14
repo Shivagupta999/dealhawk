@@ -18,35 +18,29 @@ app.use(
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+];
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      const allowedOrigins = [
-        process.env.FRONTEND_URL || 'http://localhost:5173',
-        'http://localhost:5173',
-      ];
-
-      if (allowedOrigins.includes(origin)) {
+      if (allowedOrigins.some(o => origin.startsWith(o))) {
         return callback(null, true);
       }
 
-      console.warn('⚠️ CORS blocked origin:', origin);
-      return callback(new Error('Not allowed by CORS'));
+      console.error('❌ CORS blocked:', origin);
+      callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Accept',
-    ],
-    exposedHeaders: ['Authorization'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    maxAge: 86400, 
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
 
 app.use(compression());
 
