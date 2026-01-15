@@ -1,50 +1,38 @@
-const nodemailer = require('nodemailer');
+const axios = require('axios');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+const brevoClient = axios.create({
+  baseURL: 'https://api.brevo.com/v3/smtp/email',
+  headers: {
+    'Content-Type': 'application/json',
+    'api-key': process.env.BREVO_API_KEY,
   },
-  tls: {
-    rejectUnauthorized: false
-  }
+  timeout: 10000,
 });
 
-(async () => {
-  try {
-    await transporter.verify();
-    console.log('📧 SMTP server connected successfully');
-  } catch (error) {
-    console.error('❌ SMTP connection failed:', error.message);
-  }
-})();
 
 const sendEmail = async ({ to, subject, html, text }) => {
   try {
-    const mailOptions = {
-      from: process.env.EMAIL_FROM,
-      to,
+    await brevoClient.post('', {
+      sender: {
+        email: process.env.EMAIL_FROM,
+        name: process.env.EMAIL_FROM_NAME || 'DealHawk',
+      },
+      to: [{ email: to }],
       subject,
-      html,
-      text: text || 'Please view this email in HTML format.'
-    };
-
-    await transporter.sendMail(mailOptions);
-    return true;
-  } catch (error) {
-    console.error('Email sending failed:', {
-      message: error.message,
-      code: error.code,
-      response: error.response,
-      stack: error.stack
+      htmlContent: html,
+      textContent: text || 'Please view this email in HTML format.',
     });
 
+    return true;
+  } catch (error) {
+    console.error('❌ Brevo email failed:', {
+      status: error.response?.status,
+      message: error.response?.data || error.message,
+    });
     throw error;
   }
 };
+
 
 const sendOTPEmail = async (email, otp) => {
   const html = `
@@ -63,9 +51,10 @@ const sendOTPEmail = async (email, otp) => {
     to: email,
     subject: 'DealHawk - Email Verification OTP',
     html,
-    text: `Your DealHawk OTP is ${otp}. It expires in 10 minutes.`
+    text: `Your DealHawk OTP is ${otp}. It expires in 10 minutes.`,
   });
 };
+
 
 const sendPriceAlertEmail = async ({
   email,
@@ -75,7 +64,7 @@ const sendPriceAlertEmail = async ({
   currentPrice,
   website,
   productUrl,
-  savings
+  savings,
 }) => {
   const savingsPercent = Math.round((savings / targetPrice) * 100);
 
@@ -140,17 +129,17 @@ const sendPriceAlertEmail = async ({
     to: email,
     subject: `🎉 Price Drop Alert: ${productName}`,
     html,
-    text: `${productName} dropped to ₹${currentPrice} on ${website}. Buy now: ${productUrl}`
+    text: `${productName} dropped to ₹${currentPrice} on ${website}. Buy now: ${productUrl}`,
   });
 };
 
-/**
- * SEND WEEKLY PRICE DROP DIGEST
- */
-const sendPriceDropDigest = async ({ email, name, priceDrops }) => {
-  if (priceDrops.length === 0) return;
 
-  const itemsHtml = priceDrops.map(item => `
+const sendPriceDropDigest = async ({ email, name, priceDrops }) => {
+  if (!priceDrops.length) return;
+
+  const itemsHtml = priceDrops
+    .map(
+      (item) => `
     <div style="background: #F9FAFB; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
       <h3 style="margin: 0 0 10px 0; color: #374151;">${item.productName}</h3>
       <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -180,7 +169,9 @@ const sendPriceDropDigest = async ({ email, name, priceDrops }) => {
         View Deal
       </a>
     </div>
-  `).join('');
+  `
+    )
+    .join('');
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -198,7 +189,7 @@ const sendPriceDropDigest = async ({ email, name, priceDrops }) => {
     to: email,
     subject: `📊 Your Weekly Price Drop Digest - ${priceDrops.length} Items`,
     html,
-    text: "Check your weekly price drops on DealHawk."
+    text: 'Check your weekly price drops on DealHawk.',
   });
 };
 
@@ -206,5 +197,5 @@ module.exports = {
   sendEmail,
   sendOTPEmail,
   sendPriceAlertEmail,
-  sendPriceDropDigest
+  sendPriceDropDigest,
 };

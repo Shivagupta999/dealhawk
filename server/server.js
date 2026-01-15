@@ -39,8 +39,8 @@ const shutdown = (signal) => {
   }
 };
 
-process.on('SIGTERM', () => shutdown('SIGTERM')); // Railway stop
-process.on('SIGINT', () => shutdown('SIGINT'));   // Local Ctrl+C
+process.on('SIGTERM', () => shutdown('SIGTERM')); 
+process.on('SIGINT', () => shutdown('SIGINT')); 
 
 /* -------------------- Crash Protection -------------------- */
 process.on('unhandledRejection', (err) => {

@@ -1,10 +1,10 @@
-const {redisClient} = require('../config/redis');
+const { redisClient } = require('../config/redis');
 const { sendEmail } = require('./emailService');
 
-const OTP_TTL = 600;                
-const OTP_RATE_LIMIT_TTL = 600;      
-const OTP_MAX_REQUESTS = 3;          
-const OTP_VERIFY_MAX_ATTEMPTS = 5;   
+const OTP_TTL = 600;
+const OTP_RATE_LIMIT_TTL = 600;
+const OTP_MAX_REQUESTS = 3;
+const OTP_VERIFY_MAX_ATTEMPTS = 5;
 
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -19,26 +19,17 @@ exports.sendOTP = async (email) => {
   }
 
   const otp = generateOTP();
-  await redisClient.set(
-    `otp:${email}`,
-    OTP_TTL,
-    otp
-  );
 
-  await redisClient.set(
-    `otp:attempts:${email}`,
-    OTP_TTL,
-    "0"
-  );
+  await redisClient.set(`otp:${email}`, otp, 'EX', OTP_TTL);
+  await redisClient.set(`otp:attempts:${email}`, "0", 'EX', OTP_TTL);
 
   if (!count) {
-    await redisClient.set(
-      rateLimitKey,
-      OTP_RATE_LIMIT_TTL,
-      "1"
-    );
+    await redisClient.set(rateLimitKey, "1", 'EX', OTP_RATE_LIMIT_TTL);
   } else {
-    await redisClient.incr(rateLimitKey);
+    await redisClient.multi()
+      .incr(rateLimitKey)
+      .expire(rateLimitKey, OTP_RATE_LIMIT_TTL)
+      .exec();
   }
 
   await sendEmail({
@@ -50,12 +41,12 @@ exports.sendOTP = async (email) => {
       <h1>${otp}</h1>
       <p>This OTP will expire in 10 minutes.</p>
       <p>If you did not request this, please ignore.</p>
-    `
+    `,
   });
 
-  console.log(`📧 OTP sent to ${email}`);
   return true;
 };
+
 
 exports.verifyOTP = async (email, otp) => {
   const otpKey = `otp:${email}`;
