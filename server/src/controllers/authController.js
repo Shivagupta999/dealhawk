@@ -48,6 +48,7 @@ exports.verifyOTP = async (req, res, next) => {
   try {
     let { email, otp } = req.body;
     email = email.toLowerCase().trim();
+    otp = String(otp).trim();
 
     const user = await User.findOne({ email });
     if (!user) {
