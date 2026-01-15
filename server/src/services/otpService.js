@@ -22,11 +22,11 @@ exports.sendOTP = async (email) => {
 
   const otp = generateOTP();
 
-  await redisClient.set(otpKey, otp, { ex: OTP_TTL });
-  await redisClient.set(attemptsKey, '0', { ex: OTP_TTL });
+  await redisClient.set(otpKey, otp, { EX: OTP_TTL });
+  await redisClient.set(attemptsKey, '0', { EX: OTP_TTL });
 
   if (!count) {
-    await redisClient.set(rateLimitKey, '1', { ex: OTP_RATE_LIMIT_TTL });
+    await redisClient.set(rateLimitKey, '1', { EX: OTP_RATE_LIMIT_TTL });
   } else {
     await redisClient.incr(rateLimitKey);
   }
@@ -51,6 +51,7 @@ exports.verifyOTP = async (email, otp) => {
   const attemptsKey = `otp:attempts:${email}`;
 
   const storedOTP = await redisClient.get(otpKey);
+  console.log('🔐 Stored OTP:', storedOTP, 'User OTP:', otp);
   if (!storedOTP) return false;
 
   const attempts = await redisClient.get(attemptsKey);
