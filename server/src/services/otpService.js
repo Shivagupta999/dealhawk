@@ -6,12 +6,14 @@ const OTP_RATE_LIMIT_TTL = 600;
 const OTP_MAX_REQUESTS = 3;
 const OTP_VERIFY_MAX_ATTEMPTS = 5;
 
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
+const generateOTP = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
 
 exports.sendOTP = async (email) => {
   const rateLimitKey = `otp:rate:${email}`;
+  const otpKey = `otp:${email}`;
+  const attemptsKey = `otp:attempts:${email}`;
 
   const count = await redisClient.get(rateLimitKey);
   if (count && Number(count) >= OTP_MAX_REQUESTS) {
@@ -20,16 +22,13 @@ exports.sendOTP = async (email) => {
 
   const otp = generateOTP();
 
-  await redisClient.set(`otp:${email}`, otp, 'EX', OTP_TTL);
-  await redisClient.set(`otp:attempts:${email}`, "0", 'EX', OTP_TTL);
+  await redisClient.set(otpKey, otp, { ex: OTP_TTL });
+  await redisClient.set(attemptsKey, '0', { ex: OTP_TTL });
 
   if (!count) {
-    await redisClient.set(rateLimitKey, "1", 'EX', OTP_RATE_LIMIT_TTL);
+    await redisClient.set(rateLimitKey, '1', { ex: OTP_RATE_LIMIT_TTL });
   } else {
-    await redisClient.multi()
-      .incr(rateLimitKey)
-      .expire(rateLimitKey, OTP_RATE_LIMIT_TTL)
-      .exec();
+    await redisClient.incr(rateLimitKey);
   }
 
   await sendEmail({
@@ -40,7 +39,6 @@ exports.sendOTP = async (email) => {
       <p>Your OTP is:</p>
       <h1>${otp}</h1>
       <p>This OTP will expire in 10 minutes.</p>
-      <p>If you did not request this, please ignore.</p>
     `,
   });
 
@@ -53,9 +51,7 @@ exports.verifyOTP = async (email, otp) => {
   const attemptsKey = `otp:attempts:${email}`;
 
   const storedOTP = await redisClient.get(otpKey);
-  if (!storedOTP) {
-    return false;
-  }
+  if (!storedOTP) return false;
 
   const attempts = await redisClient.get(attemptsKey);
   if (attempts && Number(attempts) >= OTP_VERIFY_MAX_ATTEMPTS) {
@@ -71,6 +67,5 @@ exports.verifyOTP = async (email, otp) => {
 
   await redisClient.del(otpKey);
   await redisClient.del(attemptsKey);
-
   return true;
 };
