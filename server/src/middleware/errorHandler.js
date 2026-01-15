@@ -1,7 +1,4 @@
-// backend/src/middleware/errorHandler.js
-
 const errorHandler = (err, req, res, next) => {
-  // Log full error only in development
   if (process.env.NODE_ENV === 'development') {
     console.error('❌ Error:', err);
   } else {

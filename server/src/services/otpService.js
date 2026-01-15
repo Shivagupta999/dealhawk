@@ -51,22 +51,28 @@ exports.verifyOTP = async (email, otp) => {
   const attemptsKey = `otp:attempts:${email}`;
 
   const storedOTP = await redisClient.get(otpKey);
-  console.log('🔐 Stored OTP:', storedOTP, 'User OTP:', otp);
+
+  console.log('🧪 OTP DEBUG', {
+    storedOTP,
+    userOTP: otp,
+    attempts: await redisClient.get(attemptsKey),
+  });
+
   if (!storedOTP) return false;
 
-  const attempts = await redisClient.get(attemptsKey);
-  if (attempts && Number(attempts) >= OTP_VERIFY_MAX_ATTEMPTS) {
+  if (storedOTP === otp) {
     await redisClient.del(otpKey);
     await redisClient.del(attemptsKey);
-    throw new Error('Too many invalid attempts. OTP expired.');
+    return true;
   }
 
-  if (storedOTP !== otp) {
-    await redisClient.incr(attemptsKey);
-    return false;
+  const attempts = await redisClient.incr(attemptsKey);
+  await redisClient.expire(attemptsKey, OTP_TTL);
+
+  if (attempts >= OTP_VERIFY_MAX_ATTEMPTS) {
+    await redisClient.del(otpKey);
+    await redisClient.del(attemptsKey);
   }
 
-  await redisClient.del(otpKey);
-  await redisClient.del(attemptsKey);
-  return true;
+  return false;
 };
