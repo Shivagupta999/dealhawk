@@ -19,20 +19,20 @@ exports.sendOTP = async (email) => {
   }
 
   const otp = generateOTP();
-  await redisClient.setEx(
+  await redisClient.set(
     `otp:${email}`,
     OTP_TTL,
     otp
   );
 
-  await redisClient.setEx(
+  await redisClient.set(
     `otp:attempts:${email}`,
     OTP_TTL,
     "0"
   );
 
   if (!count) {
-    await redisClient.setEx(
+    await redisClient.set(
       rateLimitKey,
       OTP_RATE_LIMIT_TTL,
       "1"
