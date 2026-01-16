@@ -92,11 +92,6 @@ Email: demo@dealhawk.com
 Password: demo123456
 ```
 
-### Video Demo
-[![DealHawk Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://youtu.be/YOUR_VIDEO_ID)
-
----
-
 ## 🛠️ Tech Stack
 
 ### Frontend
@@ -117,7 +112,7 @@ Password: demo123456
 
 ### External APIs
 - 🔍 **SerpAPI** - Web scraping and price data aggregation
-- 📧 **Gmail SMTP** - Email notifications
+- 📧 **BrevoAPI** - Email notifications
 
 ### DevOps & Deployment
 ![Vercel](https://img.shields.io/badge/Vercel-Frontend-000000?style=flat-square&logo=vercel&logoColor=white)
@@ -182,7 +177,7 @@ Password: demo123456
 - MongoDB (v6 or higher)
 - npm or yarn
 - SerpAPI key ([Get one here](https://serpapi.com))
-- Gmail account for SMTP
+- Gmail account for Brevo API
 
 ### Clone Repository
 
